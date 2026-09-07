@@ -18,7 +18,7 @@ CREATE TYPE "OperationResult" AS ENUM ('confirmed', 'payment_failed', 'class_ful
 
 -- CreateTable
 CREATE TABLE "parents" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "display_name" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -27,8 +27,8 @@ CREATE TABLE "parents" (
 
 -- CreateTable
 CREATE TABLE "students" (
-    "id" TEXT NOT NULL,
-    "parent_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "parent_id" UUID NOT NULL,
     "display_name" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -37,7 +37,7 @@ CREATE TABLE "students" (
 
 -- CreateTable
 CREATE TABLE "trial_classes" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "subject" "Subject" NOT NULL,
     "starts_at" TIMESTAMPTZ NOT NULL,
@@ -51,9 +51,9 @@ CREATE TABLE "trial_classes" (
 
 -- CreateTable
 CREATE TABLE "bookings" (
-    "id" TEXT NOT NULL,
-    "student_id" TEXT NOT NULL,
-    "trial_class_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "student_id" UUID NOT NULL,
+    "trial_class_id" UUID NOT NULL,
     "status" "BookingStatus" NOT NULL DEFAULT 'pending_payment',
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,26 +64,26 @@ CREATE TABLE "bookings" (
 
 -- CreateTable
 CREATE TABLE "payment_operations" (
-    "operation_id" TEXT NOT NULL,
-    "parent_id" TEXT NOT NULL,
-    "booking_id" TEXT NOT NULL,
+    "operation_id" UUID NOT NULL,
+    "parent_id" UUID NOT NULL,
+    "booking_id" UUID NOT NULL,
     "requested_outcome" "MockOutcome" NOT NULL,
     "result_code" "OperationResult" NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
 
     CONSTRAINT "payment_operations_pkey" PRIMARY KEY ("operation_id")
 );
 
 -- CreateTable
 CREATE TABLE "payment_attempts" (
-    "id" TEXT NOT NULL,
-    "booking_id" TEXT NOT NULL,
-    "operation_id" TEXT NOT NULL,
+    "id" UUID NOT NULL,
+    "booking_id" UUID NOT NULL,
+    "operation_id" UUID NOT NULL,
     "result" "AttemptResult" NOT NULL,
     "reason" "AttemptReason",
     "amount_idr" INTEGER NOT NULL,
     "currency" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
 
     CONSTRAINT "payment_attempts_pkey" PRIMARY KEY ("id")
 );

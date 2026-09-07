@@ -48,7 +48,7 @@ enum OperationResult {
 }
 
 model Parent {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   displayName String   @map("display_name")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
@@ -59,8 +59,8 @@ model Parent {
 }
 
 model Student {
-  id          String   @id @default(uuid())
-  parentId    String   @map("parent_id")
+  id          String   @id @default(uuid()) @db.Uuid
+  parentId    String   @map("parent_id") @db.Uuid
   displayName String   @map("display_name")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
@@ -72,7 +72,7 @@ model Student {
 }
 
 model TrialClass {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   title     String
   subject   Subject
   startsAt  DateTime @map("starts_at") @db.Timestamptz
@@ -88,9 +88,9 @@ model TrialClass {
 }
 
 model Booking {
-  id           String        @id @default(uuid())
-  studentId    String        @map("student_id")
-  trialClassId String        @map("trial_class_id")
+  id           String        @id @default(uuid()) @db.Uuid
+  studentId    String        @map("student_id") @db.Uuid
+  trialClassId String        @map("trial_class_id") @db.Uuid
   status       BookingStatus @default(pending_payment)
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamptz
@@ -107,12 +107,12 @@ model Booking {
 }
 
 model PaymentOperation {
-  operationId      String          @id @default(uuid()) @map("operation_id")
-  parentId         String          @map("parent_id")
-  bookingId        String          @map("booking_id")
+  operationId      String          @id @default(uuid()) @map("operation_id") @db.Uuid
+  parentId         String          @map("parent_id") @db.Uuid
+  bookingId        String          @map("booking_id") @db.Uuid
   requestedOutcome MockOutcome     @map("requested_outcome")
   resultCode       OperationResult @map("result_code")
-  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  createdAt        DateTime        @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz
 
   parent  Parent          @relation(fields: [parentId], references: [id], onDelete: Restrict)
   booking Booking         @relation(fields: [bookingId], references: [id], onDelete: Restrict)
@@ -124,14 +124,14 @@ model PaymentOperation {
 }
 
 model PaymentAttempt {
-  id          String         @id @default(uuid())
-  bookingId   String         @map("booking_id")
-  operationId String         @unique @map("operation_id")
+  id          String         @id @default(uuid()) @db.Uuid
+  bookingId   String         @map("booking_id") @db.Uuid
+  operationId String         @unique @map("operation_id") @db.Uuid
   result      AttemptResult
   reason      AttemptReason?
   amountIdr   Int            @map("amount_idr")
   currency    String
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  createdAt   DateTime       @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz
 
   booking        Booking          @relation("AttemptBooking", fields: [bookingId], references: [id], onDelete: Restrict)
   operationCombo PaymentOperation @relation("AttemptOperationCombo", fields: [operationId, bookingId], references: [operationId, bookingId], onDelete: Restrict)
