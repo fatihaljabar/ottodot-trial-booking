@@ -120,3 +120,7 @@ export function finalizePayment(
 export function getClassRoster(trialClassId: string): Promise<ClassRoster> {
   return callApi(`/api/trial-classes/${trialClassId}/roster`);
 }
+
+export function resetDemoData(): Promise<{ reset: true }> {
+  return callApi("/api/demo/reset", { method: "POST" });
+}

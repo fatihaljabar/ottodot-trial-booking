@@ -174,6 +174,11 @@ nav a[aria-current="page"] {
   font-weight: 600;
 }
 
+.reset-demo-btn {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+}
+
 /* --- Panels / cards --- */
 
 .panel {
@@ -547,4 +552,105 @@ th, td {
   text-align: center;
   color: var(--muted-foreground);
   padding: 1.5rem 0.5rem;
+}
+
+/* --- Teacher roster page --- */
+
+.roster-shell {
+  max-width: 896px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+  width: 100%;
+}
+
+.roster-header p {
+  color: var(--muted-foreground);
+  margin-bottom: 1.25rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  margin-bottom: 0.4rem;
+}
+
+.roster-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.metric-strip .panel {
+  margin-bottom: 0;
+}
+
+.metric-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.progress-track {
+  height: 0.35rem;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--foreground);
+  border-radius: 999px;
+}
+
+.badge-open { color: var(--success); }
+.badge-full { color: var(--muted-foreground); }
+
+.metric-strip .field-note {
+  margin-top: 0.6rem;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.5rem;
+}
+
+.roster-row-name {
+  display: flex;
+  align-items: center;
+}
+
+.empty-roster {
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+
+.empty-roster .empty-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-roster p {
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  max-width: 40ch;
+  margin: 0.25rem auto 1rem;
 }
