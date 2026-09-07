@@ -1,0 +1,142 @@
+// Schema mengikuti TECHNICAL.md bagian 2. Empat constraint yang tidak bisa
+// diekspresikan Prisma (partial unique index, CHECK) ditambahkan sebagai
+// SQL mentah pada migration — lihat TECHNICAL.md bagian 2.7.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BookingStatus {
+  pending_payment
+  confirmed
+  payment_failed
+  seat_unavailable
+}
+
+enum Subject {
+  science
+  math
+}
+
+enum MockOutcome {
+  success
+  failure
+}
+
+enum AttemptResult {
+  succeeded
+  failed
+  not_processed
+}
+
+enum AttemptReason {
+  mock_declined
+  class_full
+}
+
+enum OperationResult {
+  confirmed
+  payment_failed
+  class_full
+  already_confirmed
+  already_unavailable
+}
+
+model Parent {
+  id          String   @id @default(uuid())
+  displayName String   @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  students          Student[]
+  paymentOperations PaymentOperation[]
+
+  @@map("parents")
+}
+
+model Student {
+  id          String   @id @default(uuid())
+  parentId    String   @map("parent_id")
+  displayName String   @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  parent   Parent    @relation(fields: [parentId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@index([parentId])
+  @@map("students")
+}
+
+model TrialClass {
+  id        String   @id @default(uuid())
+  title     String
+  subject   Subject
+  startsAt  DateTime @map("starts_at") @db.Timestamptz
+  capacity  Int      @default(4)
+  priceIdr  Int      @default(50000) @map("price_idr")
+  currency  String   @default("IDR")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  bookings Booking[]
+
+  @@index([startsAt, id])
+  @@map("trial_classes")
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  studentId    String        @map("student_id")
+  trialClassId String        @map("trial_class_id")
+  status       BookingStatus @default(pending_payment)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+  confirmedAt  DateTime?     @map("confirmed_at") @db.Timestamptz
+
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  trialClass        TrialClass         @relation(fields: [trialClassId], references: [id], onDelete: Restrict)
+  paymentOperations PaymentOperation[]
+  paymentAttempts   PaymentAttempt[]   @relation("AttemptBooking")
+
+  @@unique([studentId, trialClassId])
+  @@index([trialClassId])
+  @@map("bookings")
+}
+
+model PaymentOperation {
+  operationId      String          @id @default(uuid()) @map("operation_id")
+  parentId         String          @map("parent_id")
+  bookingId        String          @map("booking_id")
+  requestedOutcome MockOutcome     @map("requested_outcome")
+  resultCode       OperationResult @map("result_code")
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  parent  Parent          @relation(fields: [parentId], references: [id], onDelete: Restrict)
+  booking Booking         @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  attempt PaymentAttempt? @relation("AttemptOperationCombo")
+
+  @@unique([operationId, bookingId])
+  @@index([bookingId])
+  @@map("payment_operations")
+}
+
+model PaymentAttempt {
+  id          String         @id @default(uuid())
+  bookingId   String         @map("booking_id")
+  operationId String         @unique @map("operation_id")
+  result      AttemptResult
+  reason      AttemptReason?
+  amountIdr   Int            @map("amount_idr")
+  currency    String
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  booking        Booking          @relation("AttemptBooking", fields: [bookingId], references: [id], onDelete: Restrict)
+  operationCombo PaymentOperation @relation("AttemptOperationCombo", fields: [operationId, bookingId], references: [operationId, bookingId], onDelete: Restrict)
+
+  @@unique([operationId, bookingId])
+  @@index([bookingId, createdAt, id])
+  @@map("payment_attempts")
+}

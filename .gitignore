@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Env — secrets tidak pernah masuk repo
+.env
+.env.local
+.env.*.local
+.env.test
+
+# Prisma — client dihasilkan ulang oleh `npx prisma generate`.
+# Migration TETAP masuk repo, jadi tidak di-ignore.
+src/generated/
+
+# Dokumen kerja lokal — bukan deliverable brief
+CLAUDE.md
+PRD.md
+TECHNICAL.md
+BACKLOG.md
+DESIGN.md
+TAKEHOME.md
+.claude/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Coverage
+coverage/

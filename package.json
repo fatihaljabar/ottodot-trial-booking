@@ -1,0 +1,45 @@
+{
+  "name": "ottodot-trial-booking",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration --pool=forks --poolOptions.forks.singleFork",
+    "db:up": "docker start ottodot-postgres || docker run --name ottodot-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ottodot -p 5433:5432 -d postgres:16",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "verify:invariants": "tsx scripts/verify-invariants.ts",
+    "demo:reset": "tsx scripts/reset-demo.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "next": "16.3.4",
+    "pg": "^8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "prisma": "7.10.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
