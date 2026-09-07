@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const parsed = uuidSchema.safeParse(id);
     if (!parsed.success) {
-      throw new DomainError("INVALID_REQUEST", "ID booking tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "Invalid booking ID.");
     }
     const result = await getBookingDetail(prisma, parentId, parsed.data);
     return jsonEnvelope(result, requestId);

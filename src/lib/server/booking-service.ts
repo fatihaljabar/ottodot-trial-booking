@@ -43,8 +43,8 @@ function toTrialClassView(tc: TrialClassWithCount, now: Date): TrialClassView {
     starts_at: tc.startsAt.toISOString(),
     timezone: "Asia/Jakarta",
     capacity: 4,
-    price_idr: tc.priceIdr,
-    currency: "IDR",
+    price: tc.price,
+    currency: "SGD",
     confirmed_count: confirmedCount,
     available_seats: availableSeats,
     is_bookable: tc.startsAt.getTime() > now.getTime() && availableSeats > 0,
@@ -65,8 +65,8 @@ function toPaymentAttemptView(a: BookingWithRelations["paymentAttempts"][number]
     operation_id: a.operationId,
     result: a.result,
     reason: a.reason,
-    amount_idr: a.amountIdr,
-    currency: "IDR",
+    amount: a.amount,
+    currency: "SGD",
     created_at: a.createdAt.toISOString(),
   };
 }
@@ -94,7 +94,7 @@ export async function listDemoParents(db: Db): Promise<ParentSummary[]> {
 export async function listStudents(db: Db, parentId: string): Promise<StudentSummary[]> {
   const parent = await db.parent.findUnique({ where: { id: parentId } });
   if (!parent) {
-    throw new DomainError("NOT_FOUND", "Profil orang tua tidak ditemukan.");
+    throw new DomainError("NOT_FOUND", "Parent profile not found.");
   }
   const students = await db.student.findMany({
     where: { parentId },
@@ -123,7 +123,7 @@ export async function getBookingDetail(
     include: bookingInclude,
   });
   if (!booking || booking.student.parentId !== parentId) {
-    throw new DomainError("NOT_FOUND", "Booking tidak ditemukan.");
+    throw new DomainError("NOT_FOUND", "Booking not found.");
   }
   return { booking: toBookingView(booking, new Date()) };
 }
@@ -135,7 +135,7 @@ export async function getClassRoster(db: Db, trialClassId: string): Promise<Clas
     include: trialClassInclude,
   });
   if (!trialClass) {
-    throw new DomainError("NOT_FOUND", "Kelas tidak ditemukan.");
+    throw new DomainError("NOT_FOUND", "Class not found.");
   }
 
   // Read-only, ditampilkan untuk demo guru: dua query terpisah (bukan satu
@@ -172,7 +172,7 @@ export async function createBooking(
 
       const student = await tx.student.findUnique({ where: { id: studentId } });
       if (!student || student.parentId !== parentId) {
-        throw new DomainError("NOT_FOUND", "Anak tidak ditemukan untuk profil ini.");
+        throw new DomainError("NOT_FOUND", "Child not found for this profile.");
       }
 
       // Kunci baris kelas SEBELUM apa pun lain — urutan lock TECHNICAL §4.1.
@@ -180,7 +180,7 @@ export async function createBooking(
         SELECT id FROM "trial_classes" WHERE id = ${trialClassId}::uuid FOR UPDATE
       `;
       if (lockedClass.length === 0) {
-        throw new DomainError("NOT_FOUND", "Kelas tidak ditemukan.");
+        throw new DomainError("NOT_FOUND", "Class not found.");
       }
 
       const existing = await tx.booking.findUnique({
@@ -196,7 +196,7 @@ export async function createBooking(
 
       const trialClass = await tx.trialClass.findUniqueOrThrow({ where: { id: trialClassId } });
       if (trialClass.startsAt.getTime() <= Date.now()) {
-        throw new DomainError("CLASS_STARTED", "Kelas sudah dimulai.");
+        throw new DomainError("CLASS_STARTED", "The class has already started.");
       }
 
       // COUNT sebagai statement terpisah SETELAH lock diperoleh (§4.1).
@@ -204,7 +204,7 @@ export async function createBooking(
         where: { trialClassId, status: "confirmed" },
       });
       if (confirmedCount >= CAPACITY) {
-        throw new DomainError("CLASS_FULL", "Kelas sudah penuh.");
+        throw new DomainError("CLASS_FULL", "The class is full.");
       }
 
       const created = await tx.booking.create({
@@ -260,7 +260,7 @@ export async function finalizeMockPayment(
         include: { student: true },
       });
       if (!bookingBasic || bookingBasic.student.parentId !== parentId) {
-        throw new DomainError("NOT_FOUND", "Booking tidak ditemukan.");
+        throw new DomainError("NOT_FOUND", "Booking not found.");
       }
       const trialClassId = bookingBasic.trialClassId;
 
@@ -278,7 +278,7 @@ export async function finalizeMockPayment(
         include: bookingInclude,
       });
       if (booking.student.parentId !== parentId) {
-        throw new DomainError("NOT_FOUND", "Booking tidak ditemukan.");
+        throw new DomainError("NOT_FOUND", "Booking not found.");
       }
 
       // 4. Cari payment_operations berdasarkan operation_id global.
@@ -292,7 +292,7 @@ export async function finalizeMockPayment(
           const attempt = await tx.paymentAttempt.findUnique({ where: { operationId } });
           return composeFinalizeResult(existingOp, attempt, booking, true);
         }
-        throw new DomainError("IDEMPOTENCY_CONFLICT", "Operation ID sudah dipakai untuk request lain.");
+        throw new DomainError("IDEMPOTENCY_CONFLICT", "This operation ID is already bound to a different request.");
       }
 
       // 5. Tentukan hasil TANPA menulis attempt/booking dulu.
@@ -303,7 +303,7 @@ export async function finalizeMockPayment(
         resultCode = "already_unavailable";
       } else {
         if (booking.trialClass.startsAt.getTime() <= Date.now()) {
-          throw new DomainError("CLASS_STARTED", "Kelas sudah dimulai.");
+          throw new DomainError("CLASS_STARTED", "The class has already started.");
         }
         // COUNT sebagai statement terpisah SETELAH lock diperoleh (§4.1).
         const confirmedCount = await tx.booking.count({
@@ -336,7 +336,7 @@ export async function finalizeMockPayment(
         // kapasitas yang baru dihitung di atas.
         const raced = await tx.paymentOperation.findUnique({ where: { operationId } });
         if (!raced) {
-          throw new DomainError("INTERNAL_ERROR", "Konflik operation ID tidak dapat diselesaikan.");
+          throw new DomainError("INTERNAL_ERROR", "Operation ID conflict could not be resolved.");
         }
         if (
           raced.parentId === parentId &&
@@ -346,7 +346,7 @@ export async function finalizeMockPayment(
           const attempt = await tx.paymentAttempt.findUnique({ where: { operationId } });
           return composeFinalizeResult(raced, attempt, booking, true);
         }
-        throw new DomainError("IDEMPOTENCY_CONFLICT", "Operation ID sudah dipakai untuk request lain.");
+        throw new DomainError("IDEMPOTENCY_CONFLICT", "This operation ID is already bound to a different request.");
       }
 
       // 8. Key berhasil diklaim oleh transaksi ini.
@@ -360,16 +360,16 @@ export async function finalizeMockPayment(
       // melindungi kasus menunggu UNIQUE key lintas kelas lalu waktu kelas berubah.
       const freshClass = await tx.trialClass.findUniqueOrThrow({ where: { id: trialClassId } });
       if (freshClass.startsAt.getTime() <= Date.now()) {
-        throw new DomainError("CLASS_STARTED", "Kelas sudah dimulai.");
+        throw new DomainError("CLASS_STARTED", "The class has already started.");
       }
 
-      const amountIdr = freshClass.priceIdr;
+      const amount = freshClass.price;
       const currency = freshClass.currency;
       const finalizedAt = new Date();
 
       if (resultCode === "class_full") {
         await tx.paymentAttempt.create({
-          data: { bookingId, operationId, result: "not_processed", reason: "class_full", amountIdr, currency },
+          data: { bookingId, operationId, result: "not_processed", reason: "class_full", amount, currency },
         });
         booking = await tx.booking.update({
           where: { id: bookingId },
@@ -378,7 +378,7 @@ export async function finalizeMockPayment(
         });
       } else if (resultCode === "payment_failed") {
         await tx.paymentAttempt.create({
-          data: { bookingId, operationId, result: "failed", reason: "mock_declined", amountIdr, currency },
+          data: { bookingId, operationId, result: "failed", reason: "mock_declined", amount, currency },
         });
         booking = await tx.booking.update({
           where: { id: bookingId },
@@ -387,7 +387,7 @@ export async function finalizeMockPayment(
         });
       } else {
         await tx.paymentAttempt.create({
-          data: { bookingId, operationId, result: "succeeded", reason: null, amountIdr, currency },
+          data: { bookingId, operationId, result: "succeeded", reason: null, amount, currency },
         });
         booking = await tx.booking.update({
           where: { id: bookingId },

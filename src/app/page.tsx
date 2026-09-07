@@ -13,15 +13,25 @@ import { getStoredParentId, setStoredParentId } from "@/lib/client/demo-parent";
 import type { ParentSummary, StudentSummary, TrialClassView } from "@/lib/contracts";
 
 function formatWib(iso: string): string {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-SG", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Jakarta",
   }).format(new Date(iso)) + " WIB";
 }
 
-function formatRupiah(amount: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+function formatSgd(amount: number): string {
+  return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 }).format(amount);
+}
+
+function seatsPill(c: TrialClassView): { label: string; className: string } {
+  if (!c.is_bookable) {
+    return { label: "Class full or started", className: "pill-unavailable" };
+  }
+  if (c.available_seats <= 1) {
+    return { label: `Only ${c.available_seats} seat left!`, className: "pill-warning" };
+  }
+  return { label: `${c.available_seats} of ${c.capacity} seats left`, className: "pill-neutral" };
 }
 
 export default function SelectionPage() {
@@ -38,8 +48,8 @@ export default function SelectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Muat profil demo + kelas sekali di awal; profil aktif diambil dari
-  // sessionStorage TAB ini (bukan localStorage) — TECHNICAL §3.3.
+  // Load demo parents + classes once on mount; active parent comes from THIS
+  // tab's sessionStorage (not localStorage) — TECHNICAL §3.3.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -55,7 +65,7 @@ export default function SelectionPage() {
           setParentId(parentsRes.parents[0].id);
         }
       } catch {
-        if (!cancelled) setLoadError("Data belum dapat dimuat. Silakan coba lagi.");
+        if (!cancelled) setLoadError("Data could not be loaded. Please try again.");
       }
     })();
     return () => {
@@ -63,16 +73,16 @@ export default function SelectionPage() {
     };
   }, []);
 
-  // Reset pilihan anak saat profil berganti — dilakukan SELAMA render
-  // (pola "adjusting state during render" React), bukan di useEffect,
-  // supaya tidak memicu setState sinkron di badan effect.
+  // Reset the selected child when the profile changes — done DURING render
+  // (React's "adjusting state during render" pattern), not in useEffect,
+  // to avoid a synchronous setState in the effect body.
   const [lastParentId, setLastParentId] = useState<string | null>(null);
   if (parentId !== lastParentId) {
     setLastParentId(parentId);
     setStudentId(null);
   }
 
-  // Muat ulang anak setiap kali profil berganti.
+  // Reload children whenever the profile changes.
   useEffect(() => {
     if (!parentId) return;
     setStoredParentId(parentId);
@@ -82,7 +92,7 @@ export default function SelectionPage() {
         const res = await listStudents(parentId);
         if (!cancelled) setStudents(res.students);
       } catch {
-        if (!cancelled) setLoadError("Data belum dapat dimuat. Silakan coba lagi.");
+        if (!cancelled) setLoadError("Data could not be loaded. Please try again.");
       }
     })();
     return () => {
@@ -98,7 +108,7 @@ export default function SelectionPage() {
       const result = await createBooking(parentId, studentId, trialClassId);
       router.push(`/bookings/${result.booking.id}`);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Booking gagal dibuat. Silakan coba lagi.";
+      const message = err instanceof ApiError ? err.message : "Could not create the booking. Please try again.";
       setSubmitError(message);
       setSubmitting(false);
     }
@@ -106,76 +116,146 @@ export default function SelectionPage() {
 
   if (loadError) {
     return (
-      <main>
+      <main className="page">
         <p className="error-box">{loadError}</p>
-        <button onClick={() => window.location.reload()}>Muat ulang</button>
+        <button onClick={() => window.location.reload()}>Reload</button>
       </main>
     );
   }
 
+  const selectedStudent = students.find((s) => s.id === studentId) ?? null;
+  const selectedClass = classes.find((c) => c.id === trialClassId) ?? null;
+  const canSubmit = !!(parentId && studentId && trialClassId) && !submitting;
+
   return (
-    <main>
-      <h1>Booking Kelas Trial</h1>
+    <main className="booking-shell">
+      <div className="hero">
+        <h1>Book a Trial Class for Your Child</h1>
+        <p>Experience our interactive STEM curriculum. Select a child and a live session to reserve a trial seat.</p>
+      </div>
 
-      <fieldset>
-        <legend>Profil orang tua</legend>
-        <select
-          value={parentId ?? ""}
-          onChange={(e) => setParentId(e.target.value)}
-          aria-label="Pilih profil orang tua"
-        >
-          {parents.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.display_name}
-            </option>
-          ))}
-        </select>
-        <p className="field-note">Profil demo, bukan login.</p>
-      </fieldset>
+      <div className="booking-grid">
+        <div>
+          <fieldset>
+            <legend>Parent profile</legend>
+            <select
+              value={parentId ?? ""}
+              onChange={(e) => setParentId(e.target.value)}
+              aria-label="Select parent profile"
+            >
+              {parents.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name}
+                </option>
+              ))}
+            </select>
+            <p className="field-note">Demo profile, not a login.</p>
+          </fieldset>
 
-      <fieldset>
-        <legend>Pilih anak</legend>
-        {students.length === 0 && <p className="field-note">Anak belum dimuat atau belum ada.</p>}
-        {students.map((s) => (
-          <label key={s.id}>
-            <input
-              type="radio"
-              name="student"
-              value={s.id}
-              checked={studentId === s.id}
-              onChange={() => setStudentId(s.id)}
-            />{" "}
-            {s.display_name}
-          </label>
-        ))}
-      </fieldset>
+          <fieldset>
+            <legend>Step 1 — Select the attending child</legend>
+            {students.length === 0 && <p className="field-note">No children loaded yet.</p>}
+            <div className="option-grid">
+              {students.map((s) => (
+                <label key={s.id} className="card-option">
+                  <input
+                    type="radio"
+                    name="student"
+                    value={s.id}
+                    checked={studentId === s.id}
+                    onChange={() => setStudentId(s.id)}
+                  />
+                  <span className="check-badge" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div className="option-title">{s.display_name}</div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-      <fieldset>
-        <legend>Pilih kelas trial</legend>
-        {classes.map((c) => (
-          <label key={c.id} data-disabled={!c.is_bookable}>
-            <input
-              type="radio"
-              name="class"
-              value={c.id}
-              disabled={!c.is_bookable}
-              checked={trialClassId === c.id}
-              onChange={() => setTrialClassId(c.id)}
-            />{" "}
-            {c.title} ({c.subject}) — {formatWib(c.starts_at)} — {formatRupiah(c.price_idr)} —{" "}
-            {c.is_bookable ? `${c.available_seats} kursi tersisa dari ${c.capacity}` : "Kelas penuh atau sudah dimulai"}
-          </label>
-        ))}
-        <p className="field-note">
-          Ketersediaan ini adalah cuplikan saat ini. Kursi baru dipastikan setelah pembayaran berhasil dikonfirmasi.
-        </p>
-      </fieldset>
+          <fieldset>
+            <legend>Step 2 — Available trial sessions</legend>
+            {classes.map((c) => {
+              const pill = seatsPill(c);
+              return (
+                <label
+                  key={c.id}
+                  className="card-option class-option"
+                  data-disabled={!c.is_bookable}
+                  style={{ marginBottom: "0.75rem" }}
+                >
+                  <input
+                    type="radio"
+                    name="class"
+                    value={c.id}
+                    disabled={!c.is_bookable}
+                    checked={trialClassId === c.id}
+                    onChange={() => setTrialClassId(c.id)}
+                  />
+                  <span className="check-badge" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div className="option-title">
+                    {c.title} ({c.subject})
+                  </div>
+                  <div className="option-schedule">{formatWib(c.starts_at)}</div>
+                  <div className="option-footer">
+                    <span className="price">{formatSgd(c.price)} / child</span>
+                    <span className={`pill ${pill.className}`}>{pill.label}</span>
+                  </div>
+                </label>
+              );
+            })}
+            <p className="field-note">
+              This availability is a snapshot. The seat is only guaranteed once payment is confirmed.
+            </p>
+          </fieldset>
+        </div>
 
-      {submitError && <p className="error-box">{submitError}</p>}
+        <aside className="summary-panel panel">
+          <h3>Order summary</h3>
 
-      <button onClick={handleSubmit} disabled={!parentId || !studentId || !trialClassId || submitting}>
-        {submitting ? "Sedang memproses booking…" : "Buat booking"}
-      </button>
+          {selectedStudent ? (
+            <div className="summary-row">
+              <span>Child</span>
+              <span>{selectedStudent.display_name}</span>
+            </div>
+          ) : (
+            <p className="summary-empty">Select a child to continue.</p>
+          )}
+
+          {selectedClass ? (
+            <>
+              <div className="summary-row">
+                <span>Session</span>
+                <span>{selectedClass.title}</span>
+              </div>
+              <div className="summary-row">
+                <span>Schedule</span>
+                <span>{formatWib(selectedClass.starts_at)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>Total due</span>
+                <span>{formatSgd(selectedClass.price)}</span>
+              </div>
+            </>
+          ) : (
+            <p className="summary-empty">Select a trial session to see the total.</p>
+          )}
+
+          {submitError && <p className="error-box">{submitError}</p>}
+
+          <button
+            className="primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            style={{ marginTop: "1rem" }}
+          >
+            {submitting ? "Creating booking…" : "Confirm & create booking"}
+          </button>
+        </aside>
+      </div>
     </main>
   );
 }

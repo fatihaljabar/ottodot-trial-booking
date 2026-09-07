@@ -36,8 +36,8 @@ export type TrialClassView = {
   starts_at: string;
   timezone: "Asia/Jakarta";
   capacity: 4;
-  price_idr: number;
-  currency: "IDR";
+  price: number;
+  currency: "SGD";
   confirmed_count: number;
   available_seats: number;
   is_bookable: boolean;
@@ -48,8 +48,8 @@ export type PaymentAttemptView = {
   operation_id: string;
   result: AttemptResult;
   reason: "mock_declined" | "class_full" | null;
-  amount_idr: number;
-  currency: "IDR";
+  amount: number;
+  currency: "SGD";
   created_at: string;
 };
 

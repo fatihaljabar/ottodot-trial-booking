@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const raw = request.nextUrl.searchParams.get("include_started") ?? undefined;
     const parsed = includeStartedQuerySchema.safeParse(raw);
     if (!parsed.success) {
-      throw new DomainError("INVALID_REQUEST", "Query include_started harus 'true' atau 'false'.");
+      throw new DomainError("INVALID_REQUEST", "The include_started query must be 'true' or 'false'.");
     }
     const classes = await listTrialClasses(prisma, parsed.data);
     return jsonEnvelope({ classes }, requestId);

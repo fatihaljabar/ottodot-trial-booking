@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const { id } = await params;
     const parsed = uuidSchema.safeParse(id);
     if (!parsed.success) {
-      throw new DomainError("INVALID_REQUEST", "ID kelas tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "Invalid class ID.");
     }
     const roster = await getClassRoster(prisma, parsed.data);
     return jsonEnvelope(roster, requestId);

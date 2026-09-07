@@ -47,7 +47,7 @@ async function callApi<T>(url: string, init?: RequestInit): Promise<T> {
     // Kegagalan jaringan — hasil belum diketahui, BUKAN payment_failed (BR-13).
     throw new ApiError({
       code: "RESULT_UNKNOWN",
-      message: "Tidak dapat terhubung ke server.",
+      message: "Could not connect to the server.",
       retryable: true,
       outcome: "unknown",
     });
@@ -59,7 +59,7 @@ async function callApi<T>(url: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError({
       code: "RESULT_UNKNOWN",
-      message: "Respons server tidak dapat dibaca.",
+      message: "The server response could not be read.",
       retryable: true,
       outcome: "unknown",
     });
@@ -119,4 +119,8 @@ export function finalizePayment(
 
 export function getClassRoster(trialClassId: string): Promise<ClassRoster> {
   return callApi(`/api/trial-classes/${trialClassId}/roster`);
+}
+
+export function resetDemoData(): Promise<{ reset: true }> {
+  return callApi("/api/demo/reset", { method: "POST" });
 }

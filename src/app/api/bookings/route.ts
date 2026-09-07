@@ -15,11 +15,11 @@ export async function POST(request: Request) {
     try {
       body = await request.json();
     } catch {
-      throw new DomainError("INVALID_REQUEST", "Body JSON tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "Invalid JSON body.");
     }
     const parsed = createBookingBodySchema.safeParse(body);
     if (!parsed.success) {
-      throw new DomainError("INVALID_REQUEST", "student_id/trial_class_id tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "student_id/trial_class_id is invalid.");
     }
 
     const result = await createBooking(prisma, parentId, parsed.data.student_id, parsed.data.trial_class_id);

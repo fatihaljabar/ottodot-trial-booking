@@ -41,7 +41,7 @@ export async function createScenario(
       data: { operationId, parentId, bookingId, requestedOutcome: "success", resultCode: "confirmed" },
     });
     await db.paymentAttempt.create({
-      data: { bookingId, operationId, result: "succeeded", amountIdr: 50_000, currency: "IDR" },
+      data: { bookingId, operationId, result: "succeeded", amount: 50, currency: "SGD" },
     });
   }
 

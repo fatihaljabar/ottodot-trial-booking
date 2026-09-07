@@ -1,6 +1,7 @@
 // Reset fixture demo yang dibatasi hanya pada ID di prisma/fixtures.ts.
-// Tidak pernah menyentuh data lain, tidak memakai TRUNCATE, dan tidak
-// tersedia sebagai endpoint browser — hanya dijalankan lewat `npm run demo:reset`.
+// Tidak pernah menyentuh data lain, tidak memakai TRUNCATE. CLI entrypoint
+// untuk `npm run demo:reset`; logika yang sama juga dipakai oleh
+// POST /api/demo/reset (gated di belakang DEMO_MODE) untuk tombol reset di UI.
 
 import { createPrismaClient } from "@/lib/db-client";
 import { deleteFixtures, insertFixtures } from "../prisma/fixtures";

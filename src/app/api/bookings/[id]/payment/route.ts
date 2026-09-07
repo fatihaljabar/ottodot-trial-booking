@@ -25,27 +25,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const bookingIdParsed = uuidSchema.safeParse(id);
     if (!bookingIdParsed.success) {
-      throw new DomainError("INVALID_REQUEST", "ID booking tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "Invalid booking ID.");
     }
 
     const idempotencyKey = request.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      throw new DomainError("INVALID_REQUEST", "Header Idempotency-Key wajib diisi.");
+      throw new DomainError("INVALID_REQUEST", "The Idempotency-Key header is required.");
     }
     const opIdParsed = uuidSchema.safeParse(idempotencyKey);
     if (!opIdParsed.success) {
-      throw new DomainError("INVALID_REQUEST", "Idempotency-Key harus UUID.");
+      throw new DomainError("INVALID_REQUEST", "Idempotency-Key must be a UUID.");
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      throw new DomainError("INVALID_REQUEST", "Body JSON tidak valid.");
+      throw new DomainError("INVALID_REQUEST", "Invalid JSON body.");
     }
     const bodyParsed = paymentBodySchema.safeParse(body);
     if (!bodyParsed.success) {
-      throw new DomainError("INVALID_REQUEST", "outcome harus 'success' atau 'failure'.");
+      throw new DomainError("INVALID_REQUEST", "outcome must be 'success' or 'failure'.");
     }
 
     const result = await finalizeMockPayment(

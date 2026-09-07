@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getBookingDetail, finalizePayment, ApiError } from "@/lib/client/api";
 import { getStoredParentId } from "@/lib/client/demo-parent";
@@ -17,32 +18,36 @@ type UiState = "idle" | "processing" | "outcome_unknown";
 
 const STATUS_LABEL: Record<BookingStatus, { badge: string; className: string; message: string }> = {
   pending_payment: {
-    badge: "Menunggu pembayaran",
+    badge: "Awaiting payment",
     className: "badge-pending",
-    message: "Booking tercatat. Kursi dipastikan setelah booking berhasil dikonfirmasi.",
+    message: "Booking recorded. The seat is confirmed once payment succeeds.",
   },
   confirmed: {
     badge: "Confirmed",
     className: "badge-confirmed",
-    message: "Booking berhasil dikonfirmasi. Anak Anda sudah terdaftar di kelas ini.",
+    message: "Booking confirmed. Your child is enrolled in this class.",
   },
   payment_failed: {
-    badge: "Pembayaran gagal",
+    badge: "Payment failed",
     className: "badge-failed",
-    message: "Pembayaran simulasi gagal. Booking belum dikonfirmasi.",
+    message: "The simulated payment failed. The booking is not confirmed.",
   },
   seat_unavailable: {
-    badge: "Kelas penuh",
+    badge: "Class full",
     className: "badge-unavailable",
-    message: "Kelas sudah penuh. Pembayaran simulasi tidak diproses.",
+    message: "The class is full. The simulated payment was not processed.",
   },
 };
 
-// classStarted disimpan sebagai state yang dihitung setiap kali booking
-// diterima (di effect/handler) — BUKAN dihitung langsung di badan render
-// lewat Date.now(), yang React anggap impure untuk fase render.
+// classStarted is stored as state computed whenever the booking is fetched
+// (in an effect/handler) — NOT computed directly in the render body via
+// Date.now(), which React treats as impure during render.
 function hasClassStarted(startsAtIso: string): boolean {
   return new Date(startsAtIso).getTime() <= Date.now();
+}
+
+function shortenId(id: string): string {
+  return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
 
 export default function BookingDetailPage() {
@@ -55,10 +60,11 @@ export default function BookingDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [uiState, setUiState] = useState<UiState>("idle");
   const [pendingOp, setPendingOp] = useState<PendingOperation | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
-  // Nomor generasi: setiap mutation menaikkannya; respons dari generasi lama
-  // diabaikan (DESIGN §5.3) supaya GET/POST yang tiba terlambat tidak
-  // menurunkan status terminal yang sudah diketahui.
+  // Generation counter: every mutation bumps it; responses from a stale
+  // generation are discarded (DESIGN §5.3) so a late GET/POST can't
+  // downgrade an already-known terminal status.
   const generationRef = useRef(0);
 
   useEffect(() => {
@@ -67,7 +73,7 @@ export default function BookingDetailPage() {
       const stored = getStoredParentId();
       if (!stored) {
         if (generationRef.current !== generation) return;
-        setLoadError("Pilih profil orang tua terlebih dahulu.");
+        setLoadError("Please select a parent profile first.");
         return;
       }
       setPendingOp(parsePendingOperation(sessionStorage.getItem(pendingOperationKey(stored, bookingId))));
@@ -80,7 +86,7 @@ export default function BookingDetailPage() {
         setLoadError(null);
       } catch (err) {
         if (generationRef.current !== generation) return;
-        setLoadError(err instanceof ApiError ? err.message : "Data belum dapat dimuat. Silakan coba lagi.");
+        setLoadError(err instanceof ApiError ? err.message : "Data could not be loaded. Please try again.");
       }
     })();
   }, [bookingId]);
@@ -106,15 +112,15 @@ export default function BookingDetailPage() {
     } catch (err) {
       if (generationRef.current !== generation) return;
       if (err instanceof ApiError && err.outcome === "unknown") {
-        // Respons hilang/timeout — PERTAHANKAN key tersimpan, jangan buat baru.
+        // Response lost/timed out — KEEP the stored key, don't mint a new one.
         setUiState("outcome_unknown");
       } else {
-        // Error dengan kepastian hasil (mis. IDEMPOTENCY_CONFLICT, NOT_FOUND):
-        // key ini tidak akan pernah valid lagi, aman dibuang.
+        // Error with a known outcome (e.g. IDEMPOTENCY_CONFLICT, NOT_FOUND):
+        // this key will never be valid again, safe to discard.
         sessionStorage.removeItem(pendingOperationKey(parentId, bookingId));
         setPendingOp(null);
         setUiState("idle");
-        setLoadError(err instanceof ApiError ? err.message : "Pembayaran gagal diproses.");
+        setLoadError(err instanceof ApiError ? err.message : "The payment could not be processed.");
       }
     }
   }
@@ -124,8 +130,19 @@ export default function BookingDetailPage() {
     runPayment(pendingOp.outcome, pendingOp.operationId);
   }
 
+  async function handleCopyRef() {
+    if (!booking) return;
+    try {
+      await navigator.clipboard.writeText(booking.id);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    setTimeout(() => setCopyState("idle"), 1500);
+  }
+
   if (!booking) {
-    return <main>{loadError ? <p className="error-box">{loadError}</p> : <p>Memuat…</p>}</main>;
+    return <main className="page">{loadError ? <p className="error-box">{loadError}</p> : <p>Loading…</p>}</main>;
   }
 
   const status = STATUS_LABEL[booking.status];
@@ -133,76 +150,123 @@ export default function BookingDetailPage() {
   const showPaymentPanel = paymentUiState !== "terminal" && !classStarted;
 
   return (
-    <main aria-live="polite">
-      <h1>Detail Booking</h1>
-      <p>
-        Referensi: <code>{booking.id}</code>
-      </p>
-      <p>Anak: {booking.student.display_name}</p>
-      <p>
-        Kelas: {booking.class.title} ({booking.class.subject})
-      </p>
-      <p>Nominal simulasi: Rp{booking.class.price_idr.toLocaleString("id-ID")}</p>
+    <main className="page" aria-live="polite">
+      <Link href="/" className="back-link">
+        ← Back to Booking
+      </Link>
 
-      <h2>Status</h2>
-      <p>
+      <div className="detail-card">
+        <div className="detail-card-header">
+          <span className="ref-code">
+            {shortenId(booking.id)}
+            <button className="copy-btn" onClick={handleCopyRef} type="button">
+              {copyState === "copied" ? "Copied" : copyState === "failed" ? "Couldn't copy" : "Copy"}
+            </button>
+          </span>
+          <span className="field-note">Created: {new Date(booking.created_at).toLocaleString("en-SG")}</span>
+        </div>
+
         <span className={`badge ${status.className}`}>{status.badge}</span>
-      </p>
-      <p>{status.message}</p>
+        <p className="field-note" style={{ marginTop: "0.5rem" }}>
+          {status.message}
+        </p>
+      </div>
 
-      {uiState === "processing" && <p>Sedang memproses pembayaran simulasi…</p>}
+      <div className="detail-card">
+        <h3>Order specification</h3>
+        <dl className="detail-grid">
+          <div>
+            <dt>Student</dt>
+            <dd>{booking.student.display_name}</dd>
+          </div>
+          <div>
+            <dt>Enrolled session</dt>
+            <dd>
+              {booking.class.title} ({booking.class.subject})
+              <span className="detail-sub">{new Date(booking.class.starts_at).toLocaleString("en-SG")}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Total payable</dt>
+            <dd>
+              {new Intl.NumberFormat("en-SG", {
+                style: "currency",
+                currency: "SGD",
+                maximumFractionDigits: 0,
+              }).format(booking.class.price)}
+              <span className="detail-sub">Simulated sandbox rate</span>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {uiState === "processing" && <p>Processing simulated payment…</p>}
 
       {uiState === "outcome_unknown" && (
         <div className="error-box">
-          <p>Hasil belum dapat dipastikan. Periksa status booking sebelum mencoba pembayaran baru.</p>
-          <button onClick={handleCheckResult}>Periksa hasil</button>
+          <p>The result is not yet known. Check the booking status before trying a new payment.</p>
+          <button onClick={handleCheckResult}>Check result</button>
         </div>
       )}
 
       {loadError && <p className="error-box">{loadError}</p>}
 
       {showPaymentPanel && uiState === "idle" && (
-        <fieldset>
-          <legend>Pembayaran simulasi</legend>
+        <div className="detail-card">
+          <h3>Payment simulation</h3>
           {paymentUiState === "must_resolve_pending" ? (
             <>
-              <p className="field-note">Ada operasi pembayaran sebelumnya yang belum dipastikan hasilnya.</p>
-              <button onClick={handleCheckResult}>Periksa hasil</button>
+              <p className="field-note">A previous payment attempt is still unresolved.</p>
+              <button onClick={handleCheckResult}>Check result</button>
             </>
           ) : (
-            <>
-              <button onClick={() => runPayment("success")}>Simulasikan pembayaran berhasil</button>{" "}
-              <button className="secondary" onClick={() => runPayment("failure")}>
-                Simulasikan pembayaran gagal
-              </button>
-            </>
+            <div className="sim-actions">
+              <div>
+                <button className="sim-btn-success" onClick={() => runPayment("success")}>
+                  Simulate successful payment
+                </button>
+                <p className="field-note">Confirms the booking and locks the seat.</p>
+              </div>
+              <div>
+                <button className="sim-btn-danger" onClick={() => runPayment("failure")}>
+                  Simulate failed payment
+                </button>
+                <p className="field-note">Records a failed attempt. The seat is not held.</p>
+              </div>
+            </div>
           )}
-        </fieldset>
+        </div>
       )}
 
-      <h2>Riwayat percobaan pembayaran</h2>
-      {booking.payment_attempts.length === 0 ? (
-        <p className="field-note">Belum ada percobaan.</p>
-      ) : (
-        <table>
-          <thead>
+      <h2>Payment attempt history</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Attempt ID</th>
+            <th>Result</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {booking.payment_attempts.length === 0 ? (
             <tr>
-              <th>Waktu</th>
-              <th>Hasil</th>
-              <th>Alasan</th>
+              <td colSpan={4} className="attempt-table-empty">
+                No attempts recorded yet. Run a simulation above to see it logged here.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {booking.payment_attempts.map((a) => (
+          ) : (
+            booking.payment_attempts.map((a) => (
               <tr key={a.id}>
-                <td>{new Date(a.created_at).toLocaleString("id-ID")}</td>
+                <td>{new Date(a.created_at).toLocaleString("en-SG")}</td>
+                <td className="ref-code">{shortenId(a.id)}</td>
                 <td>{a.result}</td>
                 <td>{a.reason ?? "-"}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            ))
+          )}
+        </tbody>
+      </table>
     </main>
   );
 }

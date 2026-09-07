@@ -5,7 +5,7 @@ import { uuidSchema } from "@/lib/validation";
 // bila env tidak diset atau salah ketik (TECHNICAL §3).
 export function assertDemoMode(): void {
   if (process.env.DEMO_MODE !== "true") {
-    throw new DomainError("DEMO_DISABLED", "Endpoint demo tidak aktif.");
+    throw new DomainError("DEMO_DISABLED", "Demo endpoint is not active.");
   }
 }
 
@@ -15,11 +15,11 @@ export function assertDemoMode(): void {
 export function getDemoParentId(request: Request): string {
   const header = request.headers.get("x-demo-parent-id");
   if (!header) {
-    throw new DomainError("DEMO_CONTEXT_REQUIRED", "Pilih profil orang tua terlebih dahulu.");
+    throw new DomainError("DEMO_CONTEXT_REQUIRED", "Please select a parent profile first.");
   }
   const parsed = uuidSchema.safeParse(header);
   if (!parsed.success) {
-    throw new DomainError("INVALID_REQUEST", "Header X-Demo-Parent-Id tidak valid.");
+    throw new DomainError("INVALID_REQUEST", "The X-Demo-Parent-Id header is invalid.");
   }
   return parsed.data;
 }
