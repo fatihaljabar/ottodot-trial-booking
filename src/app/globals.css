@@ -409,12 +409,15 @@ button.secondary {
 /* --- Booking status badges (bookings/[id] page) --- */
 
 .badge {
-  display: inline-block;
-  padding: 0.15rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
   border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .badge-pending { color: var(--warning-fg); }
@@ -441,4 +444,107 @@ th, td {
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
+}
+
+/* --- Booking detail page --- */
+
+.back-link {
+  display: inline-block;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.back-link:hover {
+  color: var(--foreground);
+}
+
+.detail-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.ref-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.copy-btn {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.detail-grid dt {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.3rem;
+}
+
+.detail-grid dd {
+  font-weight: 600;
+}
+
+.detail-grid .detail-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin-top: 0.15rem;
+}
+
+.sim-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.sim-btn-success {
+  background: color-mix(in srgb, var(--success) 15%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--success) 55%, var(--border));
+  color: var(--success);
+}
+
+.sim-btn-success:hover {
+  background: color-mix(in srgb, var(--success) 25%, var(--surface-1));
+}
+
+.sim-btn-danger {
+  background: color-mix(in srgb, var(--danger) 15%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  color: var(--danger);
+}
+
+.sim-btn-danger:hover {
+  background: color-mix(in srgb, var(--danger) 25%, var(--surface-1));
+}
+
+.attempt-table-empty {
+  text-align: center;
+  color: var(--muted-foreground);
+  padding: 1.5rem 0.5rem;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getBookingDetail, finalizePayment, ApiError } from "@/lib/client/api";
 import { getStoredParentId } from "@/lib/client/demo-parent";
@@ -45,6 +46,10 @@ function hasClassStarted(startsAtIso: string): boolean {
   return new Date(startsAtIso).getTime() <= Date.now();
 }
 
+function shortenId(id: string): string {
+  return `${id.slice(0, 8)}…${id.slice(-4)}`;
+}
+
 export default function BookingDetailPage() {
   const params = useParams<{ id: string }>();
   const bookingId = params.id;
@@ -55,6 +60,7 @@ export default function BookingDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [uiState, setUiState] = useState<UiState>("idle");
   const [pendingOp, setPendingOp] = useState<PendingOperation | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
   // Generation counter: every mutation bumps it; responses from a stale
   // generation are discarded (DESIGN §5.3) so a late GET/POST can't
@@ -124,6 +130,17 @@ export default function BookingDetailPage() {
     runPayment(pendingOp.outcome, pendingOp.operationId);
   }
 
+  async function handleCopyRef() {
+    if (!booking) return;
+    try {
+      await navigator.clipboard.writeText(booking.id);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    setTimeout(() => setCopyState("idle"), 1500);
+  }
+
   if (!booking) {
     return <main className="page">{loadError ? <p className="error-box">{loadError}</p> : <p>Loading…</p>}</main>;
   }
@@ -134,26 +151,54 @@ export default function BookingDetailPage() {
 
   return (
     <main className="page" aria-live="polite">
-      <h1>Booking Detail</h1>
-      <p>
-        Reference: <code>{booking.id}</code>
-      </p>
-      <p>Child: {booking.student.display_name}</p>
-      <p>
-        Class: {booking.class.title} ({booking.class.subject})
-      </p>
-      <p>
-        Simulated amount:{" "}
-        {new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 }).format(
-          booking.class.price,
-        )}
-      </p>
+      <Link href="/" className="back-link">
+        ← Back to Booking
+      </Link>
 
-      <h2>Status</h2>
-      <p>
+      <div className="detail-card">
+        <div className="detail-card-header">
+          <span className="ref-code">
+            {shortenId(booking.id)}
+            <button className="copy-btn" onClick={handleCopyRef} type="button">
+              {copyState === "copied" ? "Copied" : copyState === "failed" ? "Couldn't copy" : "Copy"}
+            </button>
+          </span>
+          <span className="field-note">Created: {new Date(booking.created_at).toLocaleString("en-SG")}</span>
+        </div>
+
         <span className={`badge ${status.className}`}>{status.badge}</span>
-      </p>
-      <p>{status.message}</p>
+        <p className="field-note" style={{ marginTop: "0.5rem" }}>
+          {status.message}
+        </p>
+      </div>
+
+      <div className="detail-card">
+        <h3>Order specification</h3>
+        <dl className="detail-grid">
+          <div>
+            <dt>Student</dt>
+            <dd>{booking.student.display_name}</dd>
+          </div>
+          <div>
+            <dt>Enrolled session</dt>
+            <dd>
+              {booking.class.title} ({booking.class.subject})
+              <span className="detail-sub">{new Date(booking.class.starts_at).toLocaleString("en-SG")}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Total payable</dt>
+            <dd>
+              {new Intl.NumberFormat("en-SG", {
+                style: "currency",
+                currency: "SGD",
+                maximumFractionDigits: 0,
+              }).format(booking.class.price)}
+              <span className="detail-sub">Simulated sandbox rate</span>
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       {uiState === "processing" && <p>Processing simulated payment…</p>}
 
@@ -167,47 +212,61 @@ export default function BookingDetailPage() {
       {loadError && <p className="error-box">{loadError}</p>}
 
       {showPaymentPanel && uiState === "idle" && (
-        <fieldset>
-          <legend>Simulated payment</legend>
+        <div className="detail-card">
+          <h3>Payment simulation</h3>
           {paymentUiState === "must_resolve_pending" ? (
             <>
               <p className="field-note">A previous payment attempt is still unresolved.</p>
               <button onClick={handleCheckResult}>Check result</button>
             </>
           ) : (
-            <>
-              <button onClick={() => runPayment("success")}>Simulate successful payment</button>{" "}
-              <button className="secondary" onClick={() => runPayment("failure")}>
-                Simulate failed payment
-              </button>
-            </>
+            <div className="sim-actions">
+              <div>
+                <button className="sim-btn-success" onClick={() => runPayment("success")}>
+                  Simulate successful payment
+                </button>
+                <p className="field-note">Confirms the booking and locks the seat.</p>
+              </div>
+              <div>
+                <button className="sim-btn-danger" onClick={() => runPayment("failure")}>
+                  Simulate failed payment
+                </button>
+                <p className="field-note">Records a failed attempt. The seat is not held.</p>
+              </div>
+            </div>
           )}
-        </fieldset>
+        </div>
       )}
 
       <h2>Payment attempt history</h2>
-      {booking.payment_attempts.length === 0 ? (
-        <p className="field-note">No attempts yet.</p>
-      ) : (
-        <table>
-          <thead>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Attempt ID</th>
+            <th>Result</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {booking.payment_attempts.length === 0 ? (
             <tr>
-              <th>Time</th>
-              <th>Result</th>
-              <th>Reason</th>
+              <td colSpan={4} className="attempt-table-empty">
+                No attempts recorded yet. Run a simulation above to see it logged here.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {booking.payment_attempts.map((a) => (
+          ) : (
+            booking.payment_attempts.map((a) => (
               <tr key={a.id}>
                 <td>{new Date(a.created_at).toLocaleString("en-SG")}</td>
+                <td className="ref-code">{shortenId(a.id)}</td>
                 <td>{a.result}</td>
                 <td>{a.reason ?? "-"}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            ))
+          )}
+        </tbody>
+      </table>
     </main>
   );
 }
