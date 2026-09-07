@@ -440,13 +440,14 @@ The layering is deliberately redundant where it is cheap. The Route Handler vali
 
 | Phase | Approx. |
 | ----- | ------- |
-| Scaffold, Prisma, local Postgres, env, scripts | 30 min |
+| Syncing the architecture notes to the decisions made in the design interview | 20 min |
+| Scaffold, Prisma, local Postgres, env, scripts | 15 min |
 | Schema, migrations, raw SQL constraints, seed, `createBooking`, `finalizeMockPayment` | 55 min |
 | Integration tests AT-01…AT-18, including debugging the concurrency harness | 85 min |
 | Route Handlers, three pages, unit tests | 45 min |
 | UI iteration, final verification, docs | 45 min |
 
-That fits inside the brief's 4-hour cap, and it is the implementation time only. Requirements and architecture notes were written before the clock started.
+That fits inside the brief's 4-hour cap. The first drafts of the requirements and architecture notes were written before the clock started; the 20-minute block above is the cost of reconciling them with the decisions that came out of the design interview, and it is counted.
 
 **Where the time actually went:** the largest single block was not writing the concurrency test — it was discovering that my first version of it *was not actually concurrent*, and rebuilding the harness around a separate OS process. Diagnosing that consumed roughly 40 minutes and produced no shipped feature, only the confidence that the headline claim of this project is true.
 
