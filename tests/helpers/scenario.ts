@@ -54,24 +54,28 @@ export async function createChild(db: PrismaClient, parentId: string, displayNam
   return studentId;
 }
 
-export async function cleanupScenario(db: PrismaClient, trialClassId: string): Promise<void> {
+export async function cleanupScenario(db: PrismaClient, scenario: Scenario): Promise<void> {
+  // Bersihkan lewat parentId scenario SECARA LANGSUNG — bukan menebak dari
+  // booking yang ada. createScenario selalu membuat tepat satu parent;
+  // seorang anak bisa saja GAGAL di-booking (mis. createBooking menolak
+  // CLASS_STARTED sebelum insert apa pun terjadi), dan anak/parent semacam
+  // itu tetap harus terhapus meski tidak pernah punya baris booking.
+  const students = await db.student.findMany({
+    where: { parentId: scenario.parentId },
+    select: { id: true },
+  });
+  const studentIds = students.map((s) => s.id);
+
   const bookings = await db.booking.findMany({
-    where: { trialClassId },
-    select: { id: true, studentId: true },
+    where: { studentId: { in: studentIds } },
+    select: { id: true },
   });
   const bookingIds = bookings.map((b) => b.id);
-  const studentIds = [...new Set(bookings.map((b) => b.studentId))];
 
   await db.paymentAttempt.deleteMany({ where: { bookingId: { in: bookingIds } } });
   await db.paymentOperation.deleteMany({ where: { bookingId: { in: bookingIds } } });
   await db.booking.deleteMany({ where: { id: { in: bookingIds } } });
-  await db.trialClass.delete({ where: { id: trialClassId } });
-
-  const students = await db.student.findMany({
-    where: { id: { in: studentIds } },
-    select: { id: true, parentId: true },
-  });
-  const parentIds = [...new Set(students.map((s) => s.parentId))];
+  await db.trialClass.delete({ where: { id: scenario.trialClassId } });
   await db.student.deleteMany({ where: { id: { in: studentIds } } });
-  await db.parent.deleteMany({ where: { id: { in: parentIds } } });
+  await db.parent.delete({ where: { id: scenario.parentId } });
 }

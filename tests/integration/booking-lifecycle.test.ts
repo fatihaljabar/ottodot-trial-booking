@@ -15,7 +15,7 @@ describe("booking lifecycle (AT-01..AT-05)", () => {
   });
 
   afterEach(async () => {
-    await cleanupScenario(db, scenario.trialClassId);
+    await cleanupScenario(db, scenario);
     await db.$disconnect();
   });
 

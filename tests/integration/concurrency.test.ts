@@ -56,7 +56,7 @@ describe("last-seat race (AT-06, AT-07)", () => {
 
   afterEach(async () => {
     if (scenario && cleanupDb) {
-      await cleanupScenario(cleanupDb, scenario.trialClassId);
+      await cleanupScenario(cleanupDb, scenario);
       await cleanupDb.$disconnect();
     }
     scenario = undefined;
