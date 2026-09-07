@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration --pool=forks --poolOptions.forks.singleFork",
+    "test:integration": "vitest run tests/integration",
     "db:up": "docker start ottodot-postgres || docker run --name ottodot-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=ottodot -p 5433:5432 -d postgres:16",
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
