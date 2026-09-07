@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { NavLinks } from "./nav-links";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +12,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en">
       <body>
         <nav>
-          <Link href="/">Booking</Link>
-          <Link href="/teacher">Teacher Roster</Link>
+          <span className="brand">Ottodot</span>
+          <NavLinks />
         </nav>
         {children}
       </body>

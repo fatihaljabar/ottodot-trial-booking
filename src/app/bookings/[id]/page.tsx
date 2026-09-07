@@ -125,7 +125,7 @@ export default function BookingDetailPage() {
   }
 
   if (!booking) {
-    return <main>{loadError ? <p className="error-box">{loadError}</p> : <p>Loading…</p>}</main>;
+    return <main className="page">{loadError ? <p className="error-box">{loadError}</p> : <p>Loading…</p>}</main>;
   }
 
   const status = STATUS_LABEL[booking.status];
@@ -133,7 +133,7 @@ export default function BookingDetailPage() {
   const showPaymentPanel = paymentUiState !== "terminal" && !classStarted;
 
   return (
-    <main aria-live="polite">
+    <main className="page" aria-live="polite">
       <h1>Booking Detail</h1>
       <p>
         Reference: <code>{booking.id}</code>

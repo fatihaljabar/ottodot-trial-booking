@@ -49,7 +49,7 @@ export default function TeacherRosterPage() {
   }, [selectedId, reloadToken]);
 
   return (
-    <main>
+    <main className="page">
       <h1>Class Roster</h1>
 
       <fieldset>

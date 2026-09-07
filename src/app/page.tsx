@@ -24,6 +24,16 @@ function formatSgd(amount: number): string {
   return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 }).format(amount);
 }
 
+function seatsPill(c: TrialClassView): { label: string; className: string } {
+  if (!c.is_bookable) {
+    return { label: "Class full or started", className: "pill-unavailable" };
+  }
+  if (c.available_seats <= 1) {
+    return { label: `Only ${c.available_seats} seat left!`, className: "pill-warning" };
+  }
+  return { label: `${c.available_seats} of ${c.capacity} seats left`, className: "pill-neutral" };
+}
+
 export default function SelectionPage() {
   const router = useRouter();
 
@@ -106,76 +116,146 @@ export default function SelectionPage() {
 
   if (loadError) {
     return (
-      <main>
+      <main className="page">
         <p className="error-box">{loadError}</p>
         <button onClick={() => window.location.reload()}>Reload</button>
       </main>
     );
   }
 
+  const selectedStudent = students.find((s) => s.id === studentId) ?? null;
+  const selectedClass = classes.find((c) => c.id === trialClassId) ?? null;
+  const canSubmit = !!(parentId && studentId && trialClassId) && !submitting;
+
   return (
-    <main>
-      <h1>Book a Trial Class</h1>
+    <main className="booking-shell">
+      <div className="hero">
+        <h1>Book a Trial Class for Your Child</h1>
+        <p>Experience our interactive STEM curriculum. Select a child and a live session to reserve a trial seat.</p>
+      </div>
 
-      <fieldset>
-        <legend>Parent profile</legend>
-        <select
-          value={parentId ?? ""}
-          onChange={(e) => setParentId(e.target.value)}
-          aria-label="Select parent profile"
-        >
-          {parents.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.display_name}
-            </option>
-          ))}
-        </select>
-        <p className="field-note">Demo profile, not a login.</p>
-      </fieldset>
+      <div className="booking-grid">
+        <div>
+          <fieldset>
+            <legend>Parent profile</legend>
+            <select
+              value={parentId ?? ""}
+              onChange={(e) => setParentId(e.target.value)}
+              aria-label="Select parent profile"
+            >
+              {parents.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name}
+                </option>
+              ))}
+            </select>
+            <p className="field-note">Demo profile, not a login.</p>
+          </fieldset>
 
-      <fieldset>
-        <legend>Select a child</legend>
-        {students.length === 0 && <p className="field-note">No children loaded yet.</p>}
-        {students.map((s) => (
-          <label key={s.id}>
-            <input
-              type="radio"
-              name="student"
-              value={s.id}
-              checked={studentId === s.id}
-              onChange={() => setStudentId(s.id)}
-            />{" "}
-            {s.display_name}
-          </label>
-        ))}
-      </fieldset>
+          <fieldset>
+            <legend>Step 1 — Select the attending child</legend>
+            {students.length === 0 && <p className="field-note">No children loaded yet.</p>}
+            <div className="option-grid">
+              {students.map((s) => (
+                <label key={s.id} className="card-option">
+                  <input
+                    type="radio"
+                    name="student"
+                    value={s.id}
+                    checked={studentId === s.id}
+                    onChange={() => setStudentId(s.id)}
+                  />
+                  <span className="check-badge" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div className="option-title">{s.display_name}</div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-      <fieldset>
-        <legend>Select a trial class</legend>
-        {classes.map((c) => (
-          <label key={c.id} data-disabled={!c.is_bookable}>
-            <input
-              type="radio"
-              name="class"
-              value={c.id}
-              disabled={!c.is_bookable}
-              checked={trialClassId === c.id}
-              onChange={() => setTrialClassId(c.id)}
-            />{" "}
-            {c.title} ({c.subject}) — {formatWib(c.starts_at)} — {formatSgd(c.price)} —{" "}
-            {c.is_bookable ? `${c.available_seats} of ${c.capacity} seats left` : "Class full or already started"}
-          </label>
-        ))}
-        <p className="field-note">
-          This availability is a snapshot. The seat is only guaranteed once payment is confirmed.
-        </p>
-      </fieldset>
+          <fieldset>
+            <legend>Step 2 — Available trial sessions</legend>
+            {classes.map((c) => {
+              const pill = seatsPill(c);
+              return (
+                <label
+                  key={c.id}
+                  className="card-option class-option"
+                  data-disabled={!c.is_bookable}
+                  style={{ marginBottom: "0.75rem" }}
+                >
+                  <input
+                    type="radio"
+                    name="class"
+                    value={c.id}
+                    disabled={!c.is_bookable}
+                    checked={trialClassId === c.id}
+                    onChange={() => setTrialClassId(c.id)}
+                  />
+                  <span className="check-badge" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div className="option-title">
+                    {c.title} ({c.subject})
+                  </div>
+                  <div className="option-schedule">{formatWib(c.starts_at)}</div>
+                  <div className="option-footer">
+                    <span className="price">{formatSgd(c.price)} / child</span>
+                    <span className={`pill ${pill.className}`}>{pill.label}</span>
+                  </div>
+                </label>
+              );
+            })}
+            <p className="field-note">
+              This availability is a snapshot. The seat is only guaranteed once payment is confirmed.
+            </p>
+          </fieldset>
+        </div>
 
-      {submitError && <p className="error-box">{submitError}</p>}
+        <aside className="summary-panel panel">
+          <h3>Order summary</h3>
 
-      <button onClick={handleSubmit} disabled={!parentId || !studentId || !trialClassId || submitting}>
-        {submitting ? "Creating booking…" : "Create booking"}
-      </button>
+          {selectedStudent ? (
+            <div className="summary-row">
+              <span>Child</span>
+              <span>{selectedStudent.display_name}</span>
+            </div>
+          ) : (
+            <p className="summary-empty">Select a child to continue.</p>
+          )}
+
+          {selectedClass ? (
+            <>
+              <div className="summary-row">
+                <span>Session</span>
+                <span>{selectedClass.title}</span>
+              </div>
+              <div className="summary-row">
+                <span>Schedule</span>
+                <span>{formatWib(selectedClass.starts_at)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>Total due</span>
+                <span>{formatSgd(selectedClass.price)}</span>
+              </div>
+            </>
+          ) : (
+            <p className="summary-empty">Select a trial session to see the total.</p>
+          )}
+
+          {submitError && <p className="error-box">{submitError}</p>}
+
+          <button
+            className="primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            style={{ marginTop: "1rem" }}
+          >
+            {submitting ? "Creating booking…" : "Confirm & create booking"}
+          </button>
+        </aside>
+      </div>
     </main>
   );
 }
