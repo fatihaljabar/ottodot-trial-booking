@@ -4,16 +4,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Ottodot Trial Booking",
-  description: "Demo booking kelas trial — Ottodot take-home",
+  description: "Trial class booking demo — Ottodot take-home",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id">
+    <html lang="en">
       <body>
         <nav>
-          <Link href="/">Pemilihan</Link>
-          <Link href="/teacher">Roster Guru</Link>
+          <Link href="/">Booking</Link>
+          <Link href="/teacher">Teacher Roster</Link>
         </nav>
         {children}
       </body>

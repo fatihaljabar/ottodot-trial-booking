@@ -77,8 +77,8 @@ model TrialClass {
   subject   Subject
   startsAt  DateTime @map("starts_at") @db.Timestamptz
   capacity  Int      @default(4)
-  priceIdr  Int      @default(50000) @map("price_idr")
-  currency  String   @default("IDR")
+  price     Int      @default(50)
+  currency  String   @default("SGD")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   bookings Booking[]
@@ -129,7 +129,7 @@ model PaymentAttempt {
   operationId String         @unique @map("operation_id") @db.Uuid
   result      AttemptResult
   reason      AttemptReason?
-  amountIdr   Int            @map("amount_idr")
+  amount      Int
   currency    String
   createdAt   DateTime       @default(dbgenerated("clock_timestamp()")) @map("created_at") @db.Timestamptz
 

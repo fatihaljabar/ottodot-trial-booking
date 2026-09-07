@@ -75,7 +75,7 @@ export class DomainError extends Error {
 export function mapDatabaseError(err: unknown): DomainError {
   const pgCode = (err as { code?: string } | null)?.code;
   if (pgCode === "55P03" || pgCode === "40P01") {
-    return new DomainError("DATABASE_BUSY", "Database sedang sibuk, coba lagi.");
+    return new DomainError("DATABASE_BUSY", "The database is busy, please try again.");
   }
-  return new DomainError("INTERNAL_ERROR", "Terjadi kesalahan internal.");
+  return new DomainError("INTERNAL_ERROR", "An internal error occurred.");
 }

@@ -13,15 +13,15 @@ import { getStoredParentId, setStoredParentId } from "@/lib/client/demo-parent";
 import type { ParentSummary, StudentSummary, TrialClassView } from "@/lib/contracts";
 
 function formatWib(iso: string): string {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-SG", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Asia/Jakarta",
   }).format(new Date(iso)) + " WIB";
 }
 
-function formatRupiah(amount: number): string {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+function formatSgd(amount: number): string {
+  return new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD", maximumFractionDigits: 0 }).format(amount);
 }
 
 export default function SelectionPage() {
@@ -38,8 +38,8 @@ export default function SelectionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Muat profil demo + kelas sekali di awal; profil aktif diambil dari
-  // sessionStorage TAB ini (bukan localStorage) — TECHNICAL §3.3.
+  // Load demo parents + classes once on mount; active parent comes from THIS
+  // tab's sessionStorage (not localStorage) — TECHNICAL §3.3.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -55,7 +55,7 @@ export default function SelectionPage() {
           setParentId(parentsRes.parents[0].id);
         }
       } catch {
-        if (!cancelled) setLoadError("Data belum dapat dimuat. Silakan coba lagi.");
+        if (!cancelled) setLoadError("Data could not be loaded. Please try again.");
       }
     })();
     return () => {
@@ -63,16 +63,16 @@ export default function SelectionPage() {
     };
   }, []);
 
-  // Reset pilihan anak saat profil berganti — dilakukan SELAMA render
-  // (pola "adjusting state during render" React), bukan di useEffect,
-  // supaya tidak memicu setState sinkron di badan effect.
+  // Reset the selected child when the profile changes — done DURING render
+  // (React's "adjusting state during render" pattern), not in useEffect,
+  // to avoid a synchronous setState in the effect body.
   const [lastParentId, setLastParentId] = useState<string | null>(null);
   if (parentId !== lastParentId) {
     setLastParentId(parentId);
     setStudentId(null);
   }
 
-  // Muat ulang anak setiap kali profil berganti.
+  // Reload children whenever the profile changes.
   useEffect(() => {
     if (!parentId) return;
     setStoredParentId(parentId);
@@ -82,7 +82,7 @@ export default function SelectionPage() {
         const res = await listStudents(parentId);
         if (!cancelled) setStudents(res.students);
       } catch {
-        if (!cancelled) setLoadError("Data belum dapat dimuat. Silakan coba lagi.");
+        if (!cancelled) setLoadError("Data could not be loaded. Please try again.");
       }
     })();
     return () => {
@@ -98,7 +98,7 @@ export default function SelectionPage() {
       const result = await createBooking(parentId, studentId, trialClassId);
       router.push(`/bookings/${result.booking.id}`);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Booking gagal dibuat. Silakan coba lagi.";
+      const message = err instanceof ApiError ? err.message : "Could not create the booking. Please try again.";
       setSubmitError(message);
       setSubmitting(false);
     }
@@ -108,21 +108,21 @@ export default function SelectionPage() {
     return (
       <main>
         <p className="error-box">{loadError}</p>
-        <button onClick={() => window.location.reload()}>Muat ulang</button>
+        <button onClick={() => window.location.reload()}>Reload</button>
       </main>
     );
   }
 
   return (
     <main>
-      <h1>Booking Kelas Trial</h1>
+      <h1>Book a Trial Class</h1>
 
       <fieldset>
-        <legend>Profil orang tua</legend>
+        <legend>Parent profile</legend>
         <select
           value={parentId ?? ""}
           onChange={(e) => setParentId(e.target.value)}
-          aria-label="Pilih profil orang tua"
+          aria-label="Select parent profile"
         >
           {parents.map((p) => (
             <option key={p.id} value={p.id}>
@@ -130,12 +130,12 @@ export default function SelectionPage() {
             </option>
           ))}
         </select>
-        <p className="field-note">Profil demo, bukan login.</p>
+        <p className="field-note">Demo profile, not a login.</p>
       </fieldset>
 
       <fieldset>
-        <legend>Pilih anak</legend>
-        {students.length === 0 && <p className="field-note">Anak belum dimuat atau belum ada.</p>}
+        <legend>Select a child</legend>
+        {students.length === 0 && <p className="field-note">No children loaded yet.</p>}
         {students.map((s) => (
           <label key={s.id}>
             <input
@@ -151,7 +151,7 @@ export default function SelectionPage() {
       </fieldset>
 
       <fieldset>
-        <legend>Pilih kelas trial</legend>
+        <legend>Select a trial class</legend>
         {classes.map((c) => (
           <label key={c.id} data-disabled={!c.is_bookable}>
             <input
@@ -162,19 +162,19 @@ export default function SelectionPage() {
               checked={trialClassId === c.id}
               onChange={() => setTrialClassId(c.id)}
             />{" "}
-            {c.title} ({c.subject}) — {formatWib(c.starts_at)} — {formatRupiah(c.price_idr)} —{" "}
-            {c.is_bookable ? `${c.available_seats} kursi tersisa dari ${c.capacity}` : "Kelas penuh atau sudah dimulai"}
+            {c.title} ({c.subject}) — {formatWib(c.starts_at)} — {formatSgd(c.price)} —{" "}
+            {c.is_bookable ? `${c.available_seats} of ${c.capacity} seats left` : "Class full or already started"}
           </label>
         ))}
         <p className="field-note">
-          Ketersediaan ini adalah cuplikan saat ini. Kursi baru dipastikan setelah pembayaran berhasil dikonfirmasi.
+          This availability is a snapshot. The seat is only guaranteed once payment is confirmed.
         </p>
       </fieldset>
 
       {submitError && <p className="error-box">{submitError}</p>}
 
       <button onClick={handleSubmit} disabled={!parentId || !studentId || !trialClassId || submitting}>
-        {submitting ? "Sedang memproses booking…" : "Buat booking"}
+        {submitting ? "Creating booking…" : "Create booking"}
       </button>
     </main>
   );

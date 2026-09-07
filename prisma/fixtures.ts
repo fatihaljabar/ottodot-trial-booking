@@ -51,20 +51,20 @@ export async function insertFixtures(tx: Tx): Promise<void> {
 
   await tx.parent.createMany({
     data: [
-      { id: ids.PARENT_A, displayName: "Orang Tua A" },
-      { id: ids.PARENT_B, displayName: "Orang Tua B" },
-      { id: ids.PARENT_SEED, displayName: "Orang Tua Seed" },
+      { id: ids.PARENT_A, displayName: "Parent A" },
+      { id: ids.PARENT_B, displayName: "Parent B" },
+      { id: ids.PARENT_SEED, displayName: "Seed Parent" },
     ],
   });
 
   await tx.student.createMany({
     data: [
-      { id: ids.CHILD_A, parentId: ids.PARENT_A, displayName: "Anak A" },
-      { id: ids.CHILD_A2, parentId: ids.PARENT_A, displayName: "Anak A2" },
-      { id: ids.CHILD_B, parentId: ids.PARENT_B, displayName: "Anak B" },
-      { id: ids.SEED_1, parentId: ids.PARENT_SEED, displayName: "Anak Seed 1" },
-      { id: ids.SEED_2, parentId: ids.PARENT_SEED, displayName: "Anak Seed 2" },
-      { id: ids.SEED_3, parentId: ids.PARENT_SEED, displayName: "Anak Seed 3" },
+      { id: ids.CHILD_A, parentId: ids.PARENT_A, displayName: "Child A" },
+      { id: ids.CHILD_A2, parentId: ids.PARENT_A, displayName: "Child A2" },
+      { id: ids.CHILD_B, parentId: ids.PARENT_B, displayName: "Child B" },
+      { id: ids.SEED_1, parentId: ids.PARENT_SEED, displayName: "Seed Child 1" },
+      { id: ids.SEED_2, parentId: ids.PARENT_SEED, displayName: "Seed Child 2" },
+      { id: ids.SEED_3, parentId: ids.PARENT_SEED, displayName: "Seed Child 3" },
     ],
   });
 
@@ -72,13 +72,13 @@ export async function insertFixtures(tx: Tx): Promise<void> {
     data: [
       {
         id: ids.AVAILABLE,
-        title: "Trial Matematika",
+        title: "Math Trial",
         subject: "math",
         startsAt: wibAtDaysFromNow(14),
       },
       {
         id: ids.LAST_SEAT,
-        title: "Trial Sains",
+        title: "Science Trial",
         subject: "science",
         startsAt: wibAtDaysFromNow(15),
       },
@@ -167,32 +167,32 @@ export async function insertFixtures(tx: Tx): Promise<void> {
         operationId: ids.OPERATION_CHILD_A2,
         result: "failed",
         reason: "mock_declined",
-        amountIdr: 50000,
-        currency: "IDR",
+        amount: 50,
+        currency: "SGD",
       },
       {
         bookingId: ids.BOOKING_SEED_1,
         operationId: ids.OPERATION_SEED_1,
         result: "succeeded",
         reason: null,
-        amountIdr: 50000,
-        currency: "IDR",
+        amount: 50,
+        currency: "SGD",
       },
       {
         bookingId: ids.BOOKING_SEED_2,
         operationId: ids.OPERATION_SEED_2,
         result: "succeeded",
         reason: null,
-        amountIdr: 50000,
-        currency: "IDR",
+        amount: 50,
+        currency: "SGD",
       },
       {
         bookingId: ids.BOOKING_SEED_3,
         operationId: ids.OPERATION_SEED_3,
         result: "succeeded",
         reason: null,
-        amountIdr: 50000,
-        currency: "IDR",
+        amount: 50,
+        currency: "SGD",
       },
     ],
   });
